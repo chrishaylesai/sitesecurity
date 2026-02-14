@@ -46,7 +46,7 @@ export default function Dashboard() {
           <Link
             key={link.href}
             href={link.href}
-            className={`rounded-lg border p-6 transition-colours ${link.colour}`}
+            className={`rounded-lg border p-6 transition-colors ${link.colour}`}
           >
             <h2 className="text-lg font-semibold text-gray-900">
               {link.title}

@@ -20,7 +20,7 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-12 text-centre text-sm text-gray-500">
+      <div className="rounded-lg border border-gray-200 bg-white p-12 text-center text-sm text-gray-500">
         {emptyMessage}
       </div>
     );
