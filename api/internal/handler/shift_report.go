@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
@@ -26,16 +27,23 @@ func (h *ShiftReportHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Route("/templates", func(r chi.Router) {
+		// Read-only: accessible to all authenticated users
 		r.Get("/", h.ListTemplates)
-		r.Post("/", h.CreateTemplate)
 		r.Get("/{id}", h.GetTemplateByID)
-		r.Put("/{id}", h.UpdateTemplate)
-		r.Delete("/{id}", h.DeleteTemplate)
+
+		// Write operations: require company_admin or site_admin role
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireRole("company_admin", "site_admin"))
+			r.Post("/", h.CreateTemplate)
+			r.Put("/{id}", h.UpdateTemplate)
+			r.Delete("/{id}", h.DeleteTemplate)
+		})
 	})
 
+	// Reports: read accessible to all, create is a worker action
 	r.Get("/", h.ListReports)
-	r.Post("/", h.CreateReport)
 	r.Get("/{id}", h.GetReportByID)
+	r.Post("/", h.CreateReport)
 
 	return r
 }

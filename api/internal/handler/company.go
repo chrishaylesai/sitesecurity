@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
@@ -24,11 +25,19 @@ func NewCompanyHandler(s *service.CompanyService) *CompanyHandler {
 // Routes returns the company routes.
 func (h *CompanyHandler) Routes() chi.Router {
 	r := chi.NewRouter()
+
+	// Read-only: accessible to all authenticated users
 	r.Get("/", h.List)
-	r.Post("/", h.Create)
 	r.Get("/{id}", h.GetByID)
-	r.Put("/{id}", h.Update)
-	r.Delete("/{id}", h.Delete)
+
+	// Write operations: require company_admin role
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireRole("company_admin"))
+		r.Post("/", h.Create)
+		r.Put("/{id}", h.Update)
+		r.Delete("/{id}", h.Delete)
+	})
+
 	return r
 }
 

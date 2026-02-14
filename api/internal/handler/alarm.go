@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
@@ -24,11 +25,21 @@ func NewAlarmHandler(s *service.AlarmService) *AlarmHandler {
 // Routes returns the alarm routes.
 func (h *AlarmHandler) Routes() chi.Router {
 	r := chi.NewRouter()
+
+	// Read-only: accessible to all authenticated users
 	r.Get("/", h.List)
-	r.Post("/", h.Raise)
 	r.Get("/{id}", h.GetByID)
-	r.Patch("/{id}/acknowledge", h.Acknowledge)
-	r.Patch("/{id}/resolve", h.Resolve)
+
+	// Worker-specific actions: accessible to all authenticated users
+	r.Post("/", h.Raise)
+
+	// Admin actions: require company_admin or site_admin role
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireRole("company_admin", "site_admin"))
+		r.Patch("/{id}/acknowledge", h.Acknowledge)
+		r.Patch("/{id}/resolve", h.Resolve)
+	})
+
 	return r
 }
 

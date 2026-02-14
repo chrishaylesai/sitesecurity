@@ -11,10 +11,23 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/auth"
 	"github.com/chrishaylesai/sitesecurity/api/internal/handler"
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
+
+// withAdminClaims adds company_admin auth claims to the request context.
+func withAdminClaims(r *http.Request) *http.Request {
+	claims := &auth.Claims{
+		Subject: "test-admin",
+		Email:   "admin@example.com",
+		Roles:   []string{"company_admin"},
+	}
+	ctx := context.WithValue(r.Context(), middleware.ClaimsContextKey, claims)
+	return r.WithContext(ctx)
+}
 
 func TestHealthEndpoint(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
@@ -41,6 +54,7 @@ func TestCompanyHandler_Create(t *testing.T) {
 	body := `{"name":"Test Security Ltd"}`
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = withAdminClaims(req)
 	rr := httptest.NewRecorder()
 
 	router := chi.NewRouter()
@@ -68,6 +82,7 @@ func TestCompanyHandler_Create_InvalidBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("not json"))
 	req.Header.Set("Content-Type", "application/json")
+	req = withAdminClaims(req)
 	rr := httptest.NewRecorder()
 
 	router := chi.NewRouter()

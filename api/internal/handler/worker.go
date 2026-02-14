@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
@@ -21,23 +22,30 @@ func NewWorkerHandler(s *service.WorkerService) *WorkerHandler {
 
 func (h *WorkerHandler) Routes() chi.Router {
 	r := chi.NewRouter()
+
+	// Read-only: accessible to all authenticated users
 	r.Get("/", h.List)
-	r.Post("/", h.Create)
 	r.Get("/{id}", h.GetByID)
-	r.Put("/{id}", h.Update)
-
-	// Certificates
 	r.Get("/{id}/certificates", h.ListCertificates)
-	r.Post("/{id}/certificates", h.CreateCertificate)
 	r.Get("/{id}/certificates/{certId}", h.GetCertificate)
-	r.Put("/{id}/certificates/{certId}", h.UpdateCertificate)
-	r.Delete("/{id}/certificates/{certId}", h.DeleteCertificate)
-
-	// Memberships
 	r.Get("/{id}/memberships", h.ListMemberships)
-	r.Post("/{id}/memberships", h.AddMembership)
-	r.Put("/{id}/memberships/{companyId}", h.UpdateMembershipRole)
-	r.Delete("/{id}/memberships/{companyId}", h.RemoveMembership)
+
+	// Write operations: require company_admin role
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireRole("company_admin"))
+		r.Post("/", h.Create)
+		r.Put("/{id}", h.Update)
+
+		// Certificates
+		r.Post("/{id}/certificates", h.CreateCertificate)
+		r.Put("/{id}/certificates/{certId}", h.UpdateCertificate)
+		r.Delete("/{id}/certificates/{certId}", h.DeleteCertificate)
+
+		// Memberships
+		r.Post("/{id}/memberships", h.AddMembership)
+		r.Put("/{id}/memberships/{companyId}", h.UpdateMembershipRole)
+		r.Delete("/{id}/memberships/{companyId}", h.RemoveMembership)
+	})
 
 	return r
 }

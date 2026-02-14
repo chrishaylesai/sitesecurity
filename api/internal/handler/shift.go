@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/chrishaylesai/sitesecurity/api/internal/middleware"
 	"github.com/chrishaylesai/sitesecurity/api/internal/model"
 	"github.com/chrishaylesai/sitesecurity/api/internal/service"
 )
@@ -24,16 +25,26 @@ func NewShiftHandler(s *service.ShiftService) *ShiftHandler {
 // Routes returns the shift routes.
 func (h *ShiftHandler) Routes() chi.Router {
 	r := chi.NewRouter()
+
+	// Read-only: accessible to all authenticated users
 	r.Get("/", h.List)
-	r.Post("/", h.Create)
 	r.Get("/{id}", h.GetByID)
-	r.Put("/{id}", h.Update)
-	r.Patch("/{id}/status", h.UpdateStatus)
-	r.Delete("/{id}", h.Delete)
 	r.Get("/{id}/assignments", h.ListAssignments)
-	r.Post("/{id}/assignments", h.CreateAssignment)
+
+	// Worker-specific actions: accessible to all authenticated users
 	r.Patch("/{id}/assignments/{assignmentId}/accept", h.AcceptAssignment)
 	r.Patch("/{id}/assignments/{assignmentId}/decline", h.DeclineAssignment)
+
+	// Write operations: require company_admin or site_admin role
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireRole("company_admin", "site_admin"))
+		r.Post("/", h.Create)
+		r.Put("/{id}", h.Update)
+		r.Patch("/{id}/status", h.UpdateStatus)
+		r.Delete("/{id}", h.Delete)
+		r.Post("/{id}/assignments", h.CreateAssignment)
+	})
+
 	return r
 }
 

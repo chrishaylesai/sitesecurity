@@ -26,6 +26,18 @@ const quickLinks = [
     colour: "bg-orange-50 border-orange-200 hover:bg-orange-100",
   },
   {
+    title: "Reports",
+    description: "Manage report templates and view shift reports.",
+    href: "/reports",
+    colour: "bg-teal-50 border-teal-200 hover:bg-teal-100",
+  },
+  {
+    title: "Check-ins",
+    description: "View GPS check-in records from workers.",
+    href: "/check-ins",
+    colour: "bg-cyan-50 border-cyan-200 hover:bg-cyan-100",
+  },
+  {
     title: "Alarms",
     description: "Monitor active alarms raised by workers.",
     href: "/alarms",
