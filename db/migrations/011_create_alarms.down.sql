@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS alarms CASCADE;
+DROP TYPE IF EXISTS alarm_status;
