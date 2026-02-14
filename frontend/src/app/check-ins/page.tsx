@@ -4,24 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import {
   PageHeader,
   DataTable,
-  Badge,
   Button,
   Modal,
   Input,
-  TextArea,
   Select,
 } from "@/components/ui";
 import { apiClient } from "@/lib/api/client";
-import type { Alarm, Worker } from "@/lib/types";
+import type { LocationCheckIn, Worker } from "@/lib/types";
 
-const statusVariant: Record<string, "danger" | "warning" | "success"> = {
-  raised: "danger",
-  acknowledged: "warning",
-  resolved: "success",
-};
-
-export default function AlarmsPage() {
-  const [alarms, setAlarms] = useState<Alarm[]>([]);
+export default function CheckInsPage() {
+  const [checkIns, setCheckIns] = useState<LocationCheckIn[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +21,9 @@ export default function AlarmsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
-    message: "",
+    workerId: "",
     latitude: "",
     longitude: "",
-    workerId: "",
     shiftId: "",
   });
 
@@ -40,11 +31,11 @@ export default function AlarmsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [alarmsData, workersData] = await Promise.all([
-        apiClient<Alarm[]>("/api/v1/alarms"),
+      const [checkInsData, workersData] = await Promise.all([
+        apiClient<LocationCheckIn[]>("/api/v1/check-ins"),
         apiClient<Worker[]>("/api/v1/workers"),
       ]);
-      setAlarms(alarmsData);
+      setCheckIns(checkInsData);
       setWorkers(workersData);
       setError(null);
     } catch (err) {
@@ -58,55 +49,36 @@ export default function AlarmsPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleRaiseAlarm = async () => {
+  const handleCreate = async () => {
     setSubmitting(true);
     try {
-      await apiClient("/api/v1/alarms", {
+      await apiClient("/api/v1/check-ins", {
         method: "POST",
         body: JSON.stringify({
           workerId: form.workerId,
-          message: form.message || undefined,
-          latitude: form.latitude ? parseFloat(form.latitude) : undefined,
-          longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+          latitude: parseFloat(form.latitude),
+          longitude: parseFloat(form.longitude),
           shiftId: form.shiftId || undefined,
         }),
       });
       setModalOpen(false);
-      setForm({ message: "", latitude: "", longitude: "", workerId: "", shiftId: "" });
+      setForm({ workerId: "", latitude: "", longitude: "", shiftId: "" });
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to raise alarm");
+      setError(err instanceof Error ? err.message : "Failed to record check-in");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleAcknowledge = async (id: string) => {
-    try {
-      await apiClient(`/api/v1/alarms/${id}/acknowledge`, { method: "PATCH" });
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to acknowledge alarm");
-    }
-  };
-
-  const handleResolve = async (id: string) => {
-    try {
-      await apiClient(`/api/v1/alarms/${id}/resolve`, { method: "PATCH" });
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resolve alarm");
-    }
-  };
-
   if (loading) {
-    return <div className="text-sm text-gray-500">Loading alarms...</div>;
+    return <div className="text-sm text-gray-500">Loading check-ins...</div>;
   }
 
   if (error) {
     return (
       <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-        Failed to load alarms: {error}
+        Failed to load check-ins: {error}
       </div>
     );
   }
@@ -134,90 +106,48 @@ export default function AlarmsPage() {
 
   const columns = [
     {
-      key: "status",
-      header: "Status",
-      render: (a: Alarm) => (
-        <Badge variant={statusVariant[a.status]}>{a.status}</Badge>
-      ),
-    },
-    {
       key: "worker",
       header: "Worker",
-      render: (a: Alarm) => workerName(a.workerId),
+      render: (c: LocationCheckIn) => workerName(c.workerId),
     },
     {
-      key: "message",
-      header: "Message",
-      render: (a: Alarm) => a.message ?? "No message",
+      key: "coordinates",
+      header: "Coordinates",
+      render: (c: LocationCheckIn) =>
+        `${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`,
     },
     {
-      key: "raisedAt",
-      header: "Raised",
-      render: (a: Alarm) => formatDate(a.raisedAt),
+      key: "shiftId",
+      header: "Shift ID",
+      render: (c: LocationCheckIn) => c.shiftId ?? "\u2014",
     },
     {
-      key: "location",
-      header: "Location",
-      render: (a: Alarm) =>
-        a.latitude != null && a.longitude != null
-          ? `${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}`
-          : "\u2014",
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (a: Alarm) => {
-        if (a.status === "raised") {
-          return (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleAcknowledge(a.id)}
-            >
-              Acknowledge
-            </Button>
-          );
-        }
-        if (a.status === "acknowledged") {
-          return (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleResolve(a.id)}
-            >
-              Resolve
-            </Button>
-          );
-        }
-        return (
-          <span className="text-green-600" title="Resolved">
-            &#10003;
-          </span>
-        );
-      },
+      key: "recordedAt",
+      header: "Recorded At",
+      render: (c: LocationCheckIn) => formatDate(c.recordedAt),
     },
   ];
 
   return (
     <div>
       <PageHeader
-        title="Alarms"
-        description="Monitor and respond to alarms raised by security workers."
+        title="Location Check-ins"
+        description="View GPS check-in records from security workers."
       />
       <div className="mb-4 flex justify-end">
-        <Button variant="danger" onClick={() => setModalOpen(true)}>
-          Raise Alarm
+        <Button variant="primary" onClick={() => setModalOpen(true)}>
+          Record Check-in
         </Button>
       </div>
       <DataTable
         columns={columns}
-        data={alarms}
-        emptyMessage="No alarms to display."
+        data={checkIns}
+        emptyMessage="No check-ins to display."
       />
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Raise Alarm"
+        title="Record Check-in"
       >
         <div className="space-y-4">
           <Select
@@ -225,12 +155,6 @@ export default function AlarmsPage() {
             options={workerOptions}
             value={form.workerId}
             onChange={(e) => setForm({ ...form, workerId: e.target.value })}
-          />
-          <TextArea
-            label="Message (optional)"
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-            placeholder="Describe the alarm..."
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -264,11 +188,11 @@ export default function AlarmsPage() {
               Cancel
             </Button>
             <Button
-              variant="danger"
-              onClick={handleRaiseAlarm}
-              disabled={!form.workerId || submitting}
+              variant="primary"
+              onClick={handleCreate}
+              disabled={!form.workerId || !form.latitude || !form.longitude || submitting}
             >
-              {submitting ? "Raising..." : "Raise Alarm"}
+              {submitting ? "Recording..." : "Record Check-in"}
             </Button>
           </div>
         </div>
