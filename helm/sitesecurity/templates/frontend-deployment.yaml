@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sitesecurity.frontendHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "sitesecurity.labels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: {{ .Values.frontend.image }}
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.frontend.apiUrl | default (printf "http://%s:%v" (include "sitesecurity.apiHost" .) .Values.api.port) | quote }}
+            - name: NEXT_PUBLIC_AUTH_URL
+              value: {{ .Values.frontend.authUrl | default (printf "http://%s:%v" (include "sitesecurity.authHost" .) .Values.auth.port) | quote }}
+            - name: NEXT_PUBLIC_AUTH_REALM
+              value: {{ .Values.frontend.authRealm | quote }}
+            - name: NEXT_PUBLIC_AUTH_CLIENT_ID
+              value: {{ .Values.frontend.authClientId | quote }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.frontend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 250m

@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sitesecurity.fullname" . }}-migrations
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+data:
+  001_create_companies.up.sql: |
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+    CREATE TABLE companies (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        address TEXT,
+        phone VARCHAR(50),
+        email VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_companies_name ON companies (name);
+
+  002_create_worksites.up.sql: |
+    CREATE TABLE worksites (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        address TEXT,
+        latitude DOUBLE PRECISION,
+        longitude DOUBLE PRECISION,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_worksites_company_id ON worksites (company_id);
+
+  003_create_workers.up.sql: |
+    CREATE TABLE workers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        auth_subject VARCHAR(255) UNIQUE NOT NULL,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE UNIQUE INDEX idx_workers_email ON workers (email);
+    CREATE INDEX idx_workers_auth_subject ON workers (auth_subject);
+
+  004_create_worker_companies.up.sql: |
+    CREATE TYPE worker_role AS ENUM ('worker', 'company_admin', 'site_admin');
+    CREATE TYPE membership_status AS ENUM ('active', 'inactive');
+
+    CREATE TABLE worker_companies (
+        worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        role worker_role NOT NULL DEFAULT 'worker',
+        status membership_status NOT NULL DEFAULT 'active',
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (worker_id, company_id)
+    );
+
+    CREATE INDEX idx_worker_companies_company_id ON worker_companies (company_id);
+
+  005_create_certificates.up.sql: |
+    CREATE TABLE certificates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        issuing_body VARCHAR(255),
+        certificate_number VARCHAR(255),
+        issued_date DATE,
+        expiry_date DATE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_certificates_worker_id ON certificates (worker_id);
+    CREATE INDEX idx_certificates_expiry_date ON certificates (expiry_date);
+
+  006_create_shifts.up.sql: |
+    CREATE TYPE shift_status AS ENUM ('open', 'assigned', 'in_progress', 'completed', 'cancelled');
+
+    CREATE TABLE shifts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        worksite_id UUID NOT NULL REFERENCES worksites(id) ON DELETE CASCADE,
+        created_by UUID NOT NULL REFERENCES workers(id),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        start_time TIMESTAMPTZ NOT NULL,
+        end_time TIMESTAMPTZ NOT NULL,
+        status shift_status NOT NULL DEFAULT 'open',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_shifts_worksite_id ON shifts (worksite_id);
+    CREATE INDEX idx_shifts_status ON shifts (status);
+    CREATE INDEX idx_shifts_start_time ON shifts (start_time);
+
+  007_create_shift_assignments.up.sql: |
+    CREATE TYPE assignment_status AS ENUM ('offered', 'accepted', 'declined', 'completed');
+
+    CREATE TABLE shift_assignments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+        worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+        status assignment_status NOT NULL DEFAULT 'offered',
+        assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        responded_at TIMESTAMPTZ,
+        UNIQUE (shift_id, worker_id)
+    );
+
+    CREATE INDEX idx_shift_assignments_worker_id ON shift_assignments (worker_id);
+    CREATE INDEX idx_shift_assignments_shift_id ON shift_assignments (shift_id);
+
+  008_create_shift_report_templates.up.sql: |
+    CREATE TABLE shift_report_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        fields JSONB NOT NULL DEFAULT '[]',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_shift_report_templates_company_id ON shift_report_templates (company_id);
+
+  009_create_shift_reports.up.sql: |
+    CREATE TABLE shift_reports (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+        worker_id UUID NOT NULL REFERENCES workers(id),
+        template_id UUID REFERENCES shift_report_templates(id),
+        data JSONB NOT NULL DEFAULT '{}',
+        submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_shift_reports_shift_id ON shift_reports (shift_id);
+    CREATE INDEX idx_shift_reports_worker_id ON shift_reports (worker_id);
+
+  010_create_location_check_ins.up.sql: |
+    CREATE TABLE location_check_ins (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+        shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+        latitude DOUBLE PRECISION NOT NULL,
+        longitude DOUBLE PRECISION NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX idx_location_check_ins_worker_id ON location_check_ins (worker_id);
+    CREATE INDEX idx_location_check_ins_shift_id ON location_check_ins (shift_id);
+    CREATE INDEX idx_location_check_ins_recorded_at ON location_check_ins (recorded_at);
+
+  011_create_alarms.up.sql: |
+    CREATE TYPE alarm_status AS ENUM ('raised', 'acknowledged', 'resolved');
+
+    CREATE TABLE alarms (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        worker_id UUID NOT NULL REFERENCES workers(id),
+        shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+        latitude DOUBLE PRECISION,
+        longitude DOUBLE PRECISION,
+        message TEXT,
+        status alarm_status NOT NULL DEFAULT 'raised',
+        raised_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        acknowledged_at TIMESTAMPTZ,
+        resolved_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX idx_alarms_worker_id ON alarms (worker_id);
+    CREATE INDEX idx_alarms_status ON alarms (status);
+    CREATE INDEX idx_alarms_raised_at ON alarms (raised_at);

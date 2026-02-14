@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sitesecurity.dbHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.db.port }}
+      targetPort: {{ .Values.db.port }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: database

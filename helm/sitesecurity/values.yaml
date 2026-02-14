@@ -1,0 +1,39 @@
+db:
+  image: postgres:16-alpine
+  user: sitesecurity
+  password: sitesecurity_dev
+  name: sitesecurity
+  port: 5432
+  storage: 1Gi
+  seeds:
+    enabled: false
+
+auth:
+  image: quay.io/keycloak/keycloak:26.0
+  adminUser: admin
+  adminPassword: admin
+  port: 8180
+
+api:
+  image: chrishaylesai/sitesecurity-api:latest
+  replicas: 1
+  port: 8080
+  authClientId: sitesecurity-api
+  authClientSecret: sitesecurity-api-secret
+  authRedirectUrl: http://localhost:3000/auth/callback
+  corsOrigins: ""
+
+frontend:
+  image: chrishaylesai/sitesecurity-frontend:latest
+  replicas: 1
+  port: 3000
+  apiUrl: ""
+  authUrl: ""
+  authRealm: sitesecurity
+  authClientId: sitesecurity-frontend
+
+ingress:
+  enabled: false
+  className: ""
+  host: sitesecurity.local
+  tls: []

@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "sitesecurity.dbHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: {{ include "sitesecurity.dbHost" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        {{- include "sitesecurity.labels" . | nindent 8 }}
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.db.image }}
+          ports:
+            - containerPort: {{ .Values.db.port }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.db.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sitesecurity.fullname" . }}
+                  key: db-password
+            - name: POSTGRES_DB
+              value: {{ .Values.db.name | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d/00-init.sh
+              subPath: 00-init.sh
+            - name: migrations
+              mountPath: /docker-entrypoint-initdb.d/migrations
+            {{- if .Values.db.seeds.enabled }}
+            - name: seeds
+              mountPath: /docker-entrypoint-initdb.d/seeds
+            {{- end }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.db.user | quote }}
+                - -d
+                - {{ .Values.db.name | quote }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+      volumes:
+        - name: init-script
+          configMap:
+            name: {{ include "sitesecurity.fullname" . }}-db-init
+            defaultMode: 0755
+        - name: migrations
+          configMap:
+            name: {{ include "sitesecurity.fullname" . }}-migrations
+        {{- if .Values.db.seeds.enabled }}
+        - name: seeds
+          configMap:
+            name: {{ include "sitesecurity.fullname" . }}-seeds
+        {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.db.storage }}

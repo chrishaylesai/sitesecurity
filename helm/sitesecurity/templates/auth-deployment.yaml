@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sitesecurity.authHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: auth
+  template:
+    metadata:
+      labels:
+        {{- include "sitesecurity.labels" . | nindent 8 }}
+        app.kubernetes.io/component: auth
+    spec:
+      containers:
+        - name: keycloak
+          image: {{ .Values.auth.image }}
+          args: ["start-dev", "--import-realm", "--http-port={{ .Values.auth.port }}"]
+          ports:
+            - containerPort: {{ .Values.auth.port }}
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://{{ include "sitesecurity.dbHost" . }}:{{ .Values.db.port }}/{{ .Values.db.name }}?currentSchema=keycloak
+            - name: KC_DB_USERNAME
+              value: {{ .Values.db.user | quote }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sitesecurity.fullname" . }}
+                  key: db-password
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: {{ .Values.auth.adminUser | quote }}
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sitesecurity.fullname" . }}
+                  key: keycloak-admin-password
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: {{ .Values.auth.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: 1Gi
+              cpu: "1"
+      volumes:
+        - name: realm-config
+          configMap:
+            name: {{ include "sitesecurity.fullname" . }}-keycloak

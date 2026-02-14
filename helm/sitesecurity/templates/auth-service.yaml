@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sitesecurity.authHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.auth.port }}
+      targetPort: {{ .Values.auth.port }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: auth

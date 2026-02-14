@@ -1,0 +1,11 @@
+{{- if .Values.db.seeds.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sitesecurity.fullname" . }}-seeds
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+data:
+  001_seed_data.sql: |
+    {{- .Files.Get "files/001_seed_data.sql" | nindent 4 }}
+{{- end }}

@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sitesecurity.apiHost" . }}
+  labels:
+    {{- include "sitesecurity.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "sitesecurity.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: {{ .Values.api.image }}
+          ports:
+            - containerPort: {{ .Values.api.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.api.port | quote }}
+            - name: DB_HOST
+              value: {{ include "sitesecurity.dbHost" . }}
+            - name: DB_PORT
+              value: {{ .Values.db.port | quote }}
+            - name: DB_USER
+              value: {{ .Values.db.user | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sitesecurity.fullname" . }}
+                  key: db-password
+            - name: DB_NAME
+              value: {{ .Values.db.name | quote }}
+            - name: AUTH_PROVIDER
+              value: keycloak
+            - name: AUTH_ISSUER_URL
+              value: http://{{ include "sitesecurity.authHost" . }}:{{ .Values.auth.port }}/realms/sitesecurity
+            - name: AUTH_CLIENT_ID
+              value: {{ .Values.api.authClientId | quote }}
+            - name: AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sitesecurity.fullname" . }}
+                  key: api-auth-client-secret
+            - name: AUTH_REDIRECT_URL
+              value: {{ .Values.api.authRedirectUrl | quote }}
+            {{- if .Values.api.corsOrigins }}
+            - name: CORS_ORIGINS
+              value: {{ .Values.api.corsOrigins | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.api.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 100m
+            limits:
+              memory: 128Mi
+              cpu: 250m
