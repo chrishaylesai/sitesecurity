@@ -29,12 +29,20 @@ func main() {
 
 	// Repositories
 	companyRepo := repository.NewCompanyRepository(db)
+	worksiteRepo := repository.NewWorksiteRepository(db)
+	workerRepo := repository.NewWorkerRepository(db)
+	certRepo := repository.NewCertificateRepository(db)
+	wcRepo := repository.NewWorkerCompanyRepository(db)
 
 	// Services
 	companySvc := service.NewCompanyService(companyRepo)
+	worksiteSvc := service.NewWorksiteService(worksiteRepo)
+	workerSvc := service.NewWorkerService(workerRepo, certRepo, wcRepo)
 
 	// Handlers
 	companyHandler := handler.NewCompanyHandler(companySvc)
+	worksiteHandler := handler.NewWorksiteHandler(worksiteSvc)
+	workerHandler := handler.NewWorkerHandler(workerSvc)
 	authHandler := handler.NewAuthHandler(authProvider)
 
 	// Router
@@ -50,6 +58,8 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Auth(authProvider))
 		r.Mount("/api/v1/companies", companyHandler.Routes())
+		r.Mount("/api/v1/worksites", worksiteHandler.Routes())
+		r.Mount("/api/v1/workers", workerHandler.Routes())
 	})
 
 	log.Printf("Starting server on :%s", cfg.Server.Port)
