@@ -33,16 +33,30 @@ func main() {
 	workerRepo := repository.NewWorkerRepository(db)
 	certRepo := repository.NewCertificateRepository(db)
 	wcRepo := repository.NewWorkerCompanyRepository(db)
+	shiftRepo := repository.NewShiftRepository(db)
+	assignmentRepo := repository.NewShiftAssignmentRepository(db)
+	templateRepo := repository.NewShiftReportTemplateRepository(db)
+	reportRepo := repository.NewShiftReportRepository(db)
+	checkInRepo := repository.NewLocationCheckInRepository(db)
+	alarmRepo := repository.NewAlarmRepository(db)
 
 	// Services
 	companySvc := service.NewCompanyService(companyRepo)
 	worksiteSvc := service.NewWorksiteService(worksiteRepo)
 	workerSvc := service.NewWorkerService(workerRepo, certRepo, wcRepo)
+	shiftSvc := service.NewShiftService(shiftRepo, assignmentRepo)
+	shiftReportSvc := service.NewShiftReportService(templateRepo, reportRepo)
+	locationSvc := service.NewLocationService(checkInRepo)
+	alarmSvc := service.NewAlarmService(alarmRepo)
 
 	// Handlers
 	companyHandler := handler.NewCompanyHandler(companySvc)
 	worksiteHandler := handler.NewWorksiteHandler(worksiteSvc)
 	workerHandler := handler.NewWorkerHandler(workerSvc)
+	shiftHandler := handler.NewShiftHandler(shiftSvc)
+	shiftReportHandler := handler.NewShiftReportHandler(shiftReportSvc)
+	locationHandler := handler.NewLocationHandler(locationSvc)
+	alarmHandler := handler.NewAlarmHandler(alarmSvc)
 	authHandler := handler.NewAuthHandler(authProvider)
 
 	// Router
@@ -60,6 +74,10 @@ func main() {
 		r.Mount("/api/v1/companies", companyHandler.Routes())
 		r.Mount("/api/v1/worksites", worksiteHandler.Routes())
 		r.Mount("/api/v1/workers", workerHandler.Routes())
+		r.Mount("/api/v1/shifts", shiftHandler.Routes())
+		r.Mount("/api/v1/shift-reports", shiftReportHandler.Routes())
+		r.Mount("/api/v1/check-ins", locationHandler.Routes())
+		r.Mount("/api/v1/alarms", alarmHandler.Routes())
 	})
 
 	log.Printf("Starting server on :%s", cfg.Server.Port)
