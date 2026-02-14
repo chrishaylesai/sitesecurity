@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sitesecurity-db
+    environment:
+      POSTGRES_DB: sitesecurity
+      POSTGRES_USER: sitesecurity
+      POSTGRES_PASSWORD: sitesecurity_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sh:/docker-entrypoint-initdb.d/00-init.sh
+      - ./db/migrations:/docker-entrypoint-initdb.d/migrations
+      - ./db/seeds:/docker-entrypoint-initdb.d/seeds
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sitesecurity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: sitesecurity-auth
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/sitesecurity
+      KC_DB_USERNAME: sitesecurity
+      KC_DB_PASSWORD: sitesecurity_dev
+      KC_DB_SCHEMA: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8180
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8180"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: sitesecurity-api
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: sitesecurity
+      DB_PASSWORD: sitesecurity_dev
+      DB_NAME: sitesecurity
+      DB_SSLMODE: disable
+      AUTH_PROVIDER: keycloak
+      AUTH_ISSUER_URL: http://auth:8180/realms/sitesecurity
+      AUTH_CLIENT_ID: sitesecurity-api
+      AUTH_CLIENT_SECRET: sitesecurity-api-secret
+      AUTH_REDIRECT_URL: http://localhost:3000/auth/callback
+      SERVER_PORT: 8080
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sitesecurity-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AUTH_URL: http://localhost:8180
+      NEXT_PUBLIC_AUTH_REALM: sitesecurity
+      NEXT_PUBLIC_AUTH_CLIENT_ID: sitesecurity-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

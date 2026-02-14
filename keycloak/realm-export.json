@@ -1,0 +1,394 @@
+{
+  "realm": "sitesecurity",
+  "enabled": true,
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "defaultRoles": [
+    "default-roles-sitesecurity"
+  ],
+  "requiredCredentials": [
+    "password"
+  ],
+  "passwordPolicy": "",
+  "roles": {
+    "realm": [
+      {
+        "name": "worker",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "company_admin",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "site_admin",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "default-roles-sitesecurity",
+        "composite": true,
+        "composites": {
+          "realm": []
+        },
+        "clientRole": false,
+        "description": "${'og-realm-default-roles'}"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sitesecurity-frontend",
+      "name": "Site Security Frontend",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+
+      "protocol": "openid-connect",
+      "attributes": {
+        "oidc.ciba.grant.expires.in": "120",
+        "client.secret.creation.time": "1707884400",
+        "backchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "display.on.consent.screen": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "access.token.format": "JWT"
+      },
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "notBefore": 0,
+
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "emailVerified",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sitesecurity-api",
+      "name": "Site Security API",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "sitesecurity-api-secret",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+
+      "protocol": "openid-connect",
+      "attributes": {
+        "oidc.ciba.grant.expires.in": "120",
+        "client.secret.creation.time": "1707884400",
+        "backchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "display.on.consent.screen": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "access.token.format": "JWT"
+      },
+      "notBefore": 0,
+
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin.user",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "email": "admin@sitesecurity.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "admin.user"
+        }
+      ],
+      "realmRoles": [
+        "company_admin",
+        "default-roles-sitesecurity"
+      ],
+      "clientRoles": {},
+      "groups": []
+    },
+    {
+      "username": "site.manager",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "email": "manager@sitesecurity.local",
+      "firstName": "Site",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "site.manager"
+        }
+      ],
+      "realmRoles": [
+        "site_admin",
+        "default-roles-sitesecurity"
+      ],
+      "clientRoles": {},
+      "groups": []
+    },
+    {
+      "username": "john.smith",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "email": "john.smith@sitesecurity.local",
+      "firstName": "John",
+      "lastName": "Smith",
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "john.smith"
+        }
+      ],
+      "realmRoles": [
+        "worker",
+        "default-roles-sitesecurity"
+      ],
+      "clientRoles": {},
+      "groups": []
+    },
+    {
+      "username": "jane.doe",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "email": "jane.doe@sitesecurity.local",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "jane.doe"
+        }
+      ],
+      "realmRoles": [
+        "worker",
+        "default-roles-sitesecurity"
+      ],
+      "clientRoles": {},
+      "groups": []
+    },
+    {
+      "username": "bob.wilson",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "email": "bob.wilson@sitesecurity.local",
+      "firstName": "Bob",
+      "lastName": "Wilson",
+      "credentials": [
+        {
+          "temporary": false,
+          "type": "password",
+          "value": "bob.wilson"
+        }
+      ],
+      "realmRoles": [
+        "worker",
+        "default-roles-sitesecurity"
+      ],
+      "clientRoles": {},
+      "groups": []
+    }
+  ],
+  "groups": [],
+  "internationalizationEnabled": false,
+  "supportedLocales": [],
+  "authenticationFlows": [
+    {
+      "alias": "browser",
+      "description": "browser based authentication",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": true,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-spnego",
+          "requirement": "DISABLED",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "requirement": "ALTERNATIVE",
+          "priority": 25,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "flowAlias": "forms",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        }
+      ]
+    },
+    {
+      "alias": "forms",
+      "description": "Username, password, otp and other auth forms.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": true,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "requirement": "OPTIONAL",
+          "priority": 20,
+          "userSetupAllowed": true,
+          "autheticatorFlow": false
+        }
+      ]
+    },
+    {
+      "alias": "Registration",
+      "description": "registration flow",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": true,
+      "authenticationExecutions": [
+        {
+          "authenticator": "registration-page-form",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "flowAlias": "registration form",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        }
+      ]
+    },
+    {
+      "alias": "registration form",
+      "description": "registration form",
+      "providerId": "form-flow",
+      "topLevel": false,
+      "builtIn": true,
+      "authenticationExecutions": [
+        {
+          "authenticator": "registration-user-creation",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "registration-profile-action",
+          "requirement": "REQUIRED",
+          "priority": 40,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "registration-password-action",
+          "requirement": "REQUIRED",
+          "priority": 50,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "registration-recaptcha-action",
+          "requirement": "DISABLED",
+          "priority": 60,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
+      ]
+    }
+  ],
+  "browserSecurityHeaders": {
+    "contentSecurityPolicyReportOnly": ""
+  },
+  "smtpServer": {},
+  "loginTheme": "keycloak",
+  "accountTheme": "keycloak",
+  "adminTheme": "keycloak",
+  "emailTheme": "keycloak",
+  "eventsEnabled": false,
+  "eventsListeners": [
+    "jboss-logging"
+  ],
+  "enabledEventTypes": [],
+  "adminEventsEnabled": false,
+  "adminEventsDetailsEnabled": false
+}

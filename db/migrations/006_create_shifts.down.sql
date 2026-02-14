@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS shifts CASCADE;
+DROP TYPE IF EXISTS shift_status;
