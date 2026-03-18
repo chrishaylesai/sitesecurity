@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth/context";
 
 const adminLinks = [
   {
@@ -71,6 +74,35 @@ function LinkCard({
 }
 
 export default function Dashboard() {
+  const { isAuthenticated, isLoading, login } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-400">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome to SiteSecurity
+        </h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Sign in to access the workforce management platform.
+        </p>
+        <button
+          onClick={login}
+          className="mt-6 rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+        >
+          Sign in
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
