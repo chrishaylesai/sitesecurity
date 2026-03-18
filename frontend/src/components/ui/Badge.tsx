@@ -1,9 +1,9 @@
 const variants: Record<string, string> = {
-  default: "bg-gray-100 text-gray-800",
-  success: "bg-green-100 text-green-800",
-  warning: "bg-yellow-100 text-yellow-800",
-  danger: "bg-red-100 text-red-800",
-  info: "bg-blue-100 text-blue-800",
+  default: "bg-gray-100 text-gray-700",
+  success: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-green-600/20",
+  warning: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-yellow-600/20",
+  danger: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-red-600/20",
+  info: "bg-gray-100 text-gray-700 ring-1 ring-inset ring-blue-600/20",
 };
 
 interface BadgeProps {
